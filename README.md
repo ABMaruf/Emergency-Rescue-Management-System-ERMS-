@@ -110,7 +110,7 @@ apache-maven-3.9.16-bin.zip
 3. After extraction, the Maven executable should be here:
 
    ```text
-   C:\Users\Abdullah\Desktop\ERMS\apache-maven-3.9.16-bin\apache-maven-3.9.16\bin\mvn.cmd
+   C:\Users\...\ERMS\apache-maven-3.9.16-bin\apache-maven-3.9.16\bin\mvn.cmd
    ```
 
 4. Add Maven to Windows PATH:
@@ -125,7 +125,7 @@ apache-maven-3.9.16-bin.zip
    - Paste this path:
 
      ```text
-     C:\Users\Abdullah\Desktop\ERMS\apache-maven-3.9.16-bin\apache-maven-3.9.16\bin
+     C:\Users\...\ERMS\apache-maven-3.9.16-bin\apache-maven-3.9.16\bin
      ```
 
    - Click `OK` on all windows
@@ -152,13 +152,13 @@ If you do not want to edit PATH, run Maven using the full path.
 Compile:
 
 ```powershell
-& "C:\Users\Abdullah\Desktop\ERMS\apache-maven-3.9.16-bin\apache-maven-3.9.16\bin\mvn.cmd" clean compile
+& "C:\Users\....\ERMS\apache-maven-3.9.16-bin\apache-maven-3.9.16\bin\mvn.cmd" clean compile
 ```
 
 Run:
 
 ```powershell
-& "C:\Users\Abdullah\Desktop\ERMS\apache-maven-3.9.16-bin\apache-maven-3.9.16\bin\mvn.cmd" spring-boot:run
+& "C:\Users\....\ERMS\apache-maven-3.9.16-bin\apache-maven-3.9.16\bin\mvn.cmd" spring-boot:run
 ```
 
 ### Common Maven Problems
