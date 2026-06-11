@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Map - ERMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .map-shell { display: grid; grid-template-rows: auto 1fr; height: 100vh; }
+        .map-topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 24px; background: rgba(255,255,255,0.88); border-bottom: 1px solid var(--border); backdrop-filter: blur(10px); }
+        .map-topbar h2 { font-size: 1.12rem; font-weight: 800; }
+        #map { width: 100%; height: 100%; }
+        .map-legend { position: fixed; bottom: 24px; right: 24px; background: rgba(255,255,255,0.92); border: 1px solid var(--border); border-radius: 18px; padding: 16px 20px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: 10px; z-index: 999; }
+        .legend-row { display: flex; align-items: center; gap: 10px; font-size: 0.93rem; font-weight: 600; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot.user { background: #175cd3; }
+        .dot.volunteer { background: #2f7d32; }
+    </style>
+</head>
+<body>
+<div class="map-shell">
+    <div class="map-topbar">
+        <div>
+            <h2>Live Tracking - Request #<span th:text="${requestId}"></span></h2>
+            <p style="color:var(--muted);font-size:.88rem;">Real-time locations shared by user and assigned volunteer</p>
+        </div>
+        <div class="topbar-chip" id="statusChip">
+            <i data-lucide="radio"></i>
+            <span>Waiting for location data...</span>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="map-legend">
+        <div class="legend-row"><div class="dot user"></div> User location</div>
+        <div class="legend-row"><div class="dot volunteer"></div> Volunteer location</div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+<script th:inline="javascript">
+    lucide.createIcons();
+
+    const requestId = [[${requestId}]];
+    const userLat = [[${request.latitude}]];
+    const userLng = [[${request.longitude}]];
+    const volLat = [[${volunteer != null ? volunteer.currentLatitude : null}]];
+    const volLng = [[${volunteer != null ? volunteer.currentLongitude : null}]];
+    const map = L.map("map").setView([23.8103, 90.4125], 13);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "OpenStreetMap"
+    }).addTo(map);
+
+    const markers = {};
+
+    function makeIcon(color) {
+        return L.divIcon({
+            className: "",
+            html: `<div style="width:20px;height:20px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25);"></div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+    }
+
+    function validLatLng(lat, lng) {
+        return lat !== null && lng !== null && !Number.isNaN(lat) && !Number.isNaN(lng);
+    }
+
+    function upsertMarker(key, lat, lng, color, label) {
+        if (!validLatLng(lat, lng)) return;
+
+        const latlng = [lat, lng];
+        if (markers[key]) {
+            markers[key].setLatLng(latlng);
+        } else {
+            markers[key] = L.marker(latlng, { icon: makeIcon(color) })
+                .addTo(map)
+                .bindPopup(label);
+        }
+    }
+
+    upsertMarker("USER_initial", userLat, userLng, "#175cd3", "User location");
+    upsertMarker("VOLUNTEER_initial", volLat, volLng, "#2f7d32", "Volunteer location");
+
+    const initialBounds = [];
+    if (validLatLng(userLat, userLng)) initialBounds.push([userLat, userLng]);
+    if (validLatLng(volLat, volLng)) initialBounds.push([volLat, volLng]);
+    if (initialBounds.length > 0) {
+        map.fitBounds(initialBounds, { padding: [60, 60] });
+    }
+
+    const stompClient = Stomp.over(new SockJS("/ws"));
+    stompClient.connect({}, () => {
+        document.getElementById("statusChip").innerHTML =
+            `<i data-lucide="radio"></i><span>Connected - tracking live</span>`;
+        lucide.createIcons();
+
+        stompClient.subscribe("/topic/location/" + requestId, (msg) => {
+            const data = JSON.parse(msg.body);
+            const key = data.type + "_" + data.senderName;
+            const color = data.type === "USER" ? "#175cd3" : "#2f7d32";
+            const latlng = [data.lat, data.lng];
+            if (!validLatLng(data.lat, data.lng)) return;
+
+            if (markers[key]) {
+                markers[key].setLatLng(latlng);
+            } else {
+                markers[key] = L.marker(latlng, { icon: makeIcon(color) })
+                    .addTo(map)
+                    .bindPopup(data.senderName + " (" + data.type + ")");
+            }
+
+            if (Object.keys(markers).length === 1) {
+                map.setView(latlng, 15);
+            }
+        });
+    });
+
+    const role = [[${#authentication.authorities[0].authority}]];
+    const channel = role.includes("VOLUNTEER") ? "volunteer" : "user";
+
+    if (role.includes("VOLUNTEER") || role.includes("USER")) {
+        navigator.geolocation.watchPosition((pos) => {
+            if (stompClient.connected) {
+                stompClient.send("/app/location/" + channel + "/" + requestId, {}, JSON.stringify({
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude
+                }));
+            }
+        }, null, { enableHighAccuracy: true, maximumAge: 4000 });
+    }
+</script>
+</body>
+</html>

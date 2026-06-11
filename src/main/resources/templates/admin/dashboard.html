@@ -1,0 +1,347 @@
+﻿<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard - ERMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-mark">
+                <i data-lucide="shield-plus"></i>
+            </div>
+            <div class="brand-text">
+                <h2>ERMS Control</h2>
+                <p>Emergency operations</p>
+            </div>
+        </div>
+
+        <div class="nav-section-title">Navigation</div>
+        <nav class="nav-links">
+            <a class="nav-link active" th:href="@{/admin/dashboard}">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Dashboard</span>
+            </a>
+            <a class="nav-link" th:href="@{/admin/requests}">
+                <i data-lucide="siren"></i>
+                <span>Requests</span>
+            </a>
+            <a class="nav-link" th:href="@{/admin/volunteers}">
+                <i data-lucide="users"></i>
+                <span>Volunteers</span>
+            </a>
+            <a class="nav-link" th:href="@{/admin/users}">
+                <i data-lucide="user-cog"></i>
+                <span>Users</span>
+            </a>
+        </nav>
+
+        <form th:action="@{/logout}" method="post" class="logout-form">
+            <button type="submit" class="logout-btn">
+                <i data-lucide="log-out"></i>
+                <span>Logout</span>
+            </button>
+        </form>
+    </aside>
+
+    <div class="main-panel">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Emergency Command Dashboard</h1>
+                <p>Monitor requests, volunteers, user activity, and response flow.</p>
+            </div>
+            <div class="topbar-actions">
+                <div class="notification-widget">
+                    <button type="button" class="topbar-chip notification-toggle" data-notification-toggle>
+                        <i data-lucide="bell-ring"></i>
+                        <span><span th:text="${unreadCount}">0</span> unread notifications</span>
+                    </button>
+                    <div class="notification-popover" data-notification-popover>
+                        <div class="notification-popover-header">
+                            <strong>Notifications</strong>
+                            <span th:text="${unreadCount + ' unread'}">0 unread</span>
+                        </div>
+                        <div class="notification-list" th:if="${not #lists.isEmpty(notifications)}">
+                            <div class="notification-item" th:each="notification : ${notifications}">
+                                <div>
+                                    <strong th:text="${notification.title}">Title</strong>
+                                    <p th:text="${notification.message}">Message</p>
+                                    <span th:text="${#temporals.format(notification.createdAt, 'MMM dd, hh:mm a')}">Time</span>
+                                </div>
+                                <span class="badge pending" th:unless="${notification.read}">NEW</span>
+                            </div>
+                        </div>
+                        <div class="empty-state compact" th:if="${#lists.isEmpty(notifications)}">
+                            <i data-lucide="bell-off"></i>
+                            <h4>No notifications</h4>
+                            <p>You have no updates right now.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="topbar-chip">
+                    <i data-lucide="user"></i>
+                    <span th:text="${adminName}">Admin</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="page-content">
+            <section class="hero-panel">
+                <div class="hero-eyebrow">
+                    <i data-lucide="shield-check"></i>
+                    <span>Response overview</span>
+                </div>
+                <h2>Coordinate rescue operations with clarity and speed.</h2>
+                <p>Use the dashboard to review emergency requests, assign responders, and keep field activity visible across the system.</p>
+
+                <div class="hero-grid">
+                    <div class="hero-mini-card">
+                        <span>Today's emergency load</span>
+                        <strong th:text="${totalRequests}">0</strong>
+                    </div>
+                    <div class="hero-mini-card">
+                        <span>Volunteer readiness</span>
+                        <strong th:text="${availableVolunteers}">0</strong>
+                    </div>
+                    <div class="hero-mini-card">
+                        <span>Unread notices</span>
+                        <strong th:text="${unreadCount}">0</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="stats-grid">
+                <article class="stat-card">
+                    <div class="stat-card-top">
+                        <span class="label">Total Requests</span>
+                        <div class="stat-icon primary"><i data-lucide="file-warning"></i></div>
+                    </div>
+                    <div class="stat-value" th:text="${totalRequests}">0</div>
+                    <div class="stat-meta">All emergency reports in the system</div>
+                </article>
+
+                <article class="stat-card">
+                    <div class="stat-card-top">
+                        <span class="label">Pending Cases</span>
+                        <div class="stat-icon warning"><i data-lucide="clock-3"></i></div>
+                    </div>
+                    <div class="stat-value" th:text="${pendingCount}">0</div>
+                    <div class="stat-meta">Waiting for review or assignment</div>
+                </article>
+
+                <article class="stat-card">
+                    <div class="stat-card-top">
+                        <span class="label">In Progress</span>
+                        <div class="stat-icon info"><i data-lucide="radio"></i></div>
+                    </div>
+                    <div class="stat-value" th:text="${activeCount}">0</div>
+                    <div class="stat-meta">Actively being handled in the field</div>
+                </article>
+
+                <article class="stat-card">
+                    <div class="stat-card-top">
+                        <span class="label">Completed</span>
+                        <div class="stat-icon success"><i data-lucide="badge-check"></i></div>
+                    </div>
+                    <div class="stat-value" th:text="${completedCount}">0</div>
+                    <div class="stat-meta">Resolved and closed requests</div>
+                </article>
+            </section>
+
+            <section class="content-grid">
+                <div class="surface-card">
+                    <div class="section-header">
+                        <div>
+                            <h3>Recent active requests</h3>
+                            <p>Latest emergency cases requiring visibility.</p>
+                        </div>
+                        <a class="inline-action" th:href="@{/admin/requests}">
+                            <span>Open requests</span>
+                            <i data-lucide="arrow-right"></i>
+                        </a>
+                    </div>
+
+                    <div class="table-wrap" th:if="${not #lists.isEmpty(recentRequests)}">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Address</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="req : ${recentRequests}">
+                                <td th:text="${req.id}"></td>
+                                <td th:text="${req.fullName}"></td>
+                                <td th:text="${req.emergencyType}"></td>
+                                <td th:text="${req.priorityLevel}"></td>
+                                <td>
+                                    <span class="badge pending" th:if="${req.status.name() == 'PENDING'}" th:text="${req.status}"></span>
+                                    <span class="badge progress" th:if="${req.status.name() == 'IN_PROGRESS' || req.status.name() == 'ASSIGNED'}" th:text="${req.status}"></span>
+                                    <span class="badge completed" th:if="${req.status.name() == 'COMPLETED'}" th:text="${req.status}"></span>
+                                    <span class="badge cancelled" th:if="${req.status.name() == 'CANCELLED'}" th:text="${req.status}"></span>
+                                </td>
+                                <td th:text="${req.address}"></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="empty-state" th:if="${#lists.isEmpty(recentRequests)}">
+                        <i data-lucide="inbox"></i>
+                        <h4>No active requests right now</h4>
+                        <p>The request queue is currently clear. New emergency submissions will appear here automatically.</p>
+                    </div>
+                </div>
+
+                <div class="stack">
+                    <section class="surface-card">
+                        <div class="section-header">
+                            <div>
+                                <h3>System highlights</h3>
+                                <p>Key operational counters for quick review.</p>
+                            </div>
+                        </div>
+                        <div class="quick-list">
+                            <div class="quick-item">
+                                <strong>Total volunteers</strong>
+                                <span th:text="${totalVolunteers}">0</span>
+                            </div>
+                            <div class="quick-item">
+                                <strong>Available volunteers</strong>
+                                <span th:text="${availableVolunteers}">0</span>
+                            </div>
+                            <div class="quick-item">
+                                <strong>Total users</strong>
+                                <span th:text="${totalUsers}">0</span>
+                            </div>
+                            <div class="quick-item">
+                                <strong>Unread notifications</strong>
+                                <span th:text="${unreadCount}">0</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="surface-card">
+                        <div class="section-header">
+                            <div>
+                                <h3>Admin focus</h3>
+                                <p>Suggested workflow for fast coordination.</p>
+                            </div>
+                        </div>
+                        <div class="quick-list">
+                            <div class="quick-item">
+                                <strong>1. Review pending cases</strong>
+                                <span>Prioritize high-risk reports first</span>
+                            </div>
+                            <div class="quick-item">
+                                <strong>2. Assign volunteers</strong>
+                                <span>Match role, location, and readiness</span>
+                            </div>
+                            <div class="quick-item">
+                                <strong>3. Track progress</strong>
+                                <span>Watch updates from field responders</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script>
+    lucide.createIcons();
+</script>
+<script>
+    (function () {
+        const sidebar = document.querySelector(".sidebar");
+        const layout = document.querySelector(".dashboard-layout");
+        if (!sidebar || !layout || document.querySelector(".mobile-menu-btn")) return;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "mobile-menu-btn";
+        button.setAttribute("aria-label", "Open navigation");
+            button.classList.remove("hidden");
+        button.innerHTML = '<i data-lucide="menu"></i>';
+
+        const backdrop = document.createElement("div");
+        backdrop.className = "sidebar-backdrop";
+
+        function closeSidebar() {
+            sidebar.classList.remove("open");
+            backdrop.classList.remove("show");
+            button.setAttribute("aria-label", "Open navigation");
+            button.classList.remove("hidden");
+        }
+
+        function toggleSidebar() {
+            const open = sidebar.classList.toggle("open");
+            backdrop.classList.toggle("show", open);
+            button.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+            button.classList.toggle("hidden", open);
+        }
+
+        button.addEventListener("click", toggleSidebar);
+        backdrop.addEventListener("click", closeSidebar);
+        sidebar.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeSidebar));
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") closeSidebar();
+        });
+
+        document.body.prepend(backdrop);
+        document.body.prepend(button);
+        if (window.lucide) lucide.createIcons();
+    })();
+</script>
+<script>
+    (function () {
+        document.querySelectorAll("[data-notification-toggle]").forEach((toggle) => {
+            const widget = toggle.closest(".notification-widget");
+            const popover = widget ? widget.querySelector("[data-notification-popover]") : null;
+            if (!popover) return;
+
+            toggle.addEventListener("click", (event) => {
+                event.stopPropagation();
+                const willOpen = !popover.classList.contains("open");
+                document.querySelectorAll("[data-notification-popover].open").forEach((openPopover) => {
+                    openPopover.classList.remove("open");
+                });
+                popover.classList.toggle("open", willOpen);
+            });
+
+            popover.addEventListener("click", (event) => event.stopPropagation());
+        });
+
+        document.addEventListener("click", () => {
+            document.querySelectorAll("[data-notification-popover].open").forEach((popover) => {
+                popover.classList.remove("open");
+            });
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                document.querySelectorAll("[data-notification-popover].open").forEach((popover) => {
+                    popover.classList.remove("open");
+                });
+            }
+        });
+    })();
+</script>
+</body>
+</html>
+
+
+
+
+
+

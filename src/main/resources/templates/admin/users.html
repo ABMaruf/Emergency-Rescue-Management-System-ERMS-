@@ -1,0 +1,59 @@
+﻿<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>Users - ERMS</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" th:href="@{/css/style.css}"><script src="https://unpkg.com/lucide@latest"></script></head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar"><div class="brand"><div class="brand-mark"><i data-lucide="shield-plus"></i></div><div class="brand-text"><h2>ERMS Control</h2><p>Emergency operations</p></div></div><div class="nav-section-title">Navigation</div><nav class="nav-links"><a class="nav-link" th:href="@{/admin/dashboard}"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a><a class="nav-link" th:href="@{/admin/requests}"><i data-lucide="siren"></i><span>Requests</span></a><a class="nav-link" th:href="@{/admin/volunteers}"><i data-lucide="users"></i><span>Volunteers</span></a><a class="nav-link active" th:href="@{/admin/users}"><i data-lucide="user-cog"></i><span>Users</span></a>
+        </nav><form th:action="@{/logout}" method="post" class="logout-form"><button type="submit" class="logout-btn"><i data-lucide="log-out"></i><span>Logout</span></button></form></aside>
+    <div class="main-panel"><header class="topbar"><div class="topbar-title"><h1>System Users</h1><p>Manage registered accounts, roles, and activation state.</p></div><div class="topbar-actions"><div class="topbar-chip"><i data-lucide="user-cog"></i><span>Access control</span></div></div></header><main class="page-content"><section class="surface-card"><div class="section-header"><div><h3>Registered accounts</h3><p>Review roles and toggle account access.</p></div></div><div class="table-wrap" th:if="${not #lists.isEmpty(users)}"><table><thead><tr><th>ID</th><th>Full Name</th><th>Username</th><th>Email</th><th>Role</th><th>Active</th><th>Action</th></tr></thead><tbody><tr th:each="u : ${users}"><td th:text="${u.id}"></td><td th:text="${u.fullName}"></td><td th:text="${u.username}"></td><td th:text="${u.email}"></td><td th:text="${u.role}"></td><td><span class="badge completed" th:if="${u.active}">ACTIVE</span><span class="badge cancelled" th:if="${!u.active}">INACTIVE</span></td><td><form th:action="@{/admin/users/{id}/toggle(id=${u.id})}" method="post"><button type="submit">Toggle Status</button></form></td></tr></tbody></table></div><div class="empty-state" th:if="${#lists.isEmpty(users)}"><i data-lucide="user-x"></i><h4>No users found</h4><p>Registered users will appear here after accounts are created.</p></div></section></main></div>
+</div>
+<script>lucide.createIcons();</script>
+<script>
+    (function () {
+        const sidebar = document.querySelector(".sidebar");
+        const layout = document.querySelector(".dashboard-layout");
+        if (!sidebar || !layout || document.querySelector(".mobile-menu-btn")) return;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "mobile-menu-btn";
+        button.setAttribute("aria-label", "Open navigation");
+            button.classList.remove("hidden");
+        button.innerHTML = '<i data-lucide="menu"></i>';
+
+        const backdrop = document.createElement("div");
+        backdrop.className = "sidebar-backdrop";
+
+        function closeSidebar() {
+            sidebar.classList.remove("open");
+            backdrop.classList.remove("show");
+            button.setAttribute("aria-label", "Open navigation");
+            button.classList.remove("hidden");
+        }
+
+        function toggleSidebar() {
+            const open = sidebar.classList.toggle("open");
+            backdrop.classList.toggle("show", open);
+            button.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+            button.classList.toggle("hidden", open);
+        }
+
+        button.addEventListener("click", toggleSidebar);
+        backdrop.addEventListener("click", closeSidebar);
+        sidebar.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeSidebar));
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") closeSidebar();
+        });
+
+        document.body.prepend(backdrop);
+        document.body.prepend(button);
+        if (window.lucide) lucide.createIcons();
+    })();
+</script>
+</body>
+</html>
+
+
+
+
+

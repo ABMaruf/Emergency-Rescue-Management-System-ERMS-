@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Notifications - ERMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-mark"><i data-lucide="bell-ring"></i></div>
+            <div class="brand-text">
+                <h2>ERMS Alerts</h2>
+                <p th:text="${roleLabel}">USER</p>
+            </div>
+        </div>
+
+        <div class="nav-section-title">Navigation</div>
+        <nav class="nav-links">
+            <a class="nav-link" th:href="@{${dashboardUrl}}">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Dashboard</span>
+            </a>
+            <a class="nav-link active" th:href="@{/notifications}">
+                <i data-lucide="bell-ring"></i>
+                <span>Notifications</span>
+            </a>
+        </nav>
+
+        <form th:action="@{/logout}" method="post" class="logout-form">
+            <button type="submit" class="logout-btn">
+                <i data-lucide="log-out"></i>
+                <span>Logout</span>
+            </button>
+        </form>
+    </aside>
+
+    <div class="main-panel">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Notifications</h1>
+                <p>Review assignment, request, and system updates.</p>
+            </div>
+            <div class="topbar-actions">
+                <div class="topbar-chip">
+                    <i data-lucide="bell"></i>
+                    <span><span th:text="${unreadCount}">0</span> unread</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="page-content">
+            <section class="surface-card">
+                <div class="section-header">
+                    <div>
+                        <h3>All notifications</h3>
+                        <p>Newest updates appear first.</p>
+                    </div>
+                    <form th:if="${unreadCount > 0}" th:action="@{/notifications/read-all}" method="post" style="width:auto;">
+                        <button type="submit" class="btn btn-secondary">
+                            <i data-lucide="check-check"></i>
+                            <span>Mark all read</span>
+                        </button>
+                    </form>
+                </div>
+
+                <div class="quick-list" th:if="${not #lists.isEmpty(notifications)}">
+                    <div class="quick-item" th:each="notification : ${notifications}">
+                        <div>
+                            <strong th:text="${notification.title}">Notification title</strong>
+                            <p style="color:var(--muted);margin-top:6px;" th:text="${notification.message}">Notification message</p>
+                            <span style="display:block;margin-top:8px;color:var(--muted);font-size:.86rem;"
+                                  th:text="${#temporals.format(notification.createdAt, 'MMM dd, yyyy hh:mm a')}"></span>
+                        </div>
+
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <span class="badge completed" th:if="${notification.read}">READ</span>
+                            <span class="badge pending" th:unless="${notification.read}">UNREAD</span>
+                            <form th:unless="${notification.read}"
+                                  th:action="@{/notifications/{id}/read(id=${notification.id})}"
+                                  method="post"
+                                  style="width:auto;">
+                                <button type="submit" class="btn btn-secondary" style="min-height:38px;">
+                                    <i data-lucide="check"></i>
+                                    <span>Mark read</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="empty-state" th:if="${#lists.isEmpty(notifications)}">
+                    <i data-lucide="bell-off"></i>
+                    <h4>No notifications yet</h4>
+                    <p>New request assignments, task updates, and system messages will appear here.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script>
+    lucide.createIcons();
+</script>
+<script>
+    (function () {
+        const sidebar = document.querySelector(".sidebar");
+        const layout = document.querySelector(".dashboard-layout");
+        if (!sidebar || !layout || document.querySelector(".mobile-menu-btn")) return;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "mobile-menu-btn";
+        button.setAttribute("aria-label", "Open navigation");
+        button.innerHTML = '<i data-lucide="menu"></i>';
+
+        const backdrop = document.createElement("div");
+        backdrop.className = "sidebar-backdrop";
+
+        function closeSidebar() {
+            sidebar.classList.remove("open");
+            backdrop.classList.remove("show");
+            button.classList.remove("hidden");
+            button.setAttribute("aria-label", "Open navigation");
+        }
+
+        function toggleSidebar() {
+            const open = sidebar.classList.toggle("open");
+            backdrop.classList.toggle("show", open);
+            button.classList.toggle("hidden", open);
+            button.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+        }
+
+        button.addEventListener("click", toggleSidebar);
+        backdrop.addEventListener("click", closeSidebar);
+        sidebar.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeSidebar));
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") closeSidebar();
+        });
+
+        document.body.prepend(backdrop);
+        document.body.prepend(button);
+        if (window.lucide) lucide.createIcons();
+    })();
+</script>
+</body>
+</html>

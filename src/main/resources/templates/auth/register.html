@@ -1,0 +1,245 @@
+﻿<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Register - ERMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="auth-shell">
+    <section class="auth-showcase">
+        <div>
+            <div class="brand">
+                <div class="brand-mark"><i data-lucide="shield-plus"></i></div>
+                <div class="brand-text">
+                    <h2>ERMS</h2>
+                    <p>Emergency Rescue Management System</p>
+                </div>
+            </div>
+
+            <div class="auth-copy">
+                <h1>Create access for coordinated rescue.</h1>
+                <p>Register as a citizen user or field volunteer and connect to the emergency response workflow.</p>
+
+                <div class="auth-points">
+                    <div class="auth-point"><i data-lucide="user-plus"></i><span>User accounts can submit and track emergency requests</span></div>
+                    <div class="auth-point"><i data-lucide="hand-heart"></i><span>Volunteer accounts can receive and update assigned missions</span></div>
+                    <div class="auth-point"><i data-lucide="lock-keyhole"></i><span>Role-based access keeps each dashboard focused</span></div>
+                </div>
+            </div>
+        </div>
+
+        <p class="mobile-top-note">Emergency coordination platform for rapid, structured, and trackable response.</p>
+    </section>
+
+    <section class="auth-panel">
+        <div class="auth-card">
+            <h2>Create account</h2>
+            <p class="subtitle">Choose the right role and complete your ERMS profile.</p>
+
+            <div th:if="${error}" class="alert error" th:text="${error}"></div>
+
+            <form th:action="@{/register}" method="post" class="stack">
+                <div class="form-group">
+                    <label for="fullName">Full Name</label>
+                    <input id="fullName" type="text" name="fullName" placeholder="Enter full name" required>
+                </div>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input id="username" type="text" name="username" placeholder="Choose a username" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input id="email" type="email" name="email" placeholder="Enter email address" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input id="phone" type="text" name="phone" placeholder="Enter phone number">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input id="password" type="password" name="password" placeholder="Create a password" required>
+                </div>
+                <div class="form-group">
+                    <label for="role">Register As</label>
+                    <select id="role" name="role" required>
+                        <option value="">Select role</option>
+                        <option th:each="role : ${roles}" th:value="${role}" th:text="${role}"></option>
+                    </select>
+                </div>
+
+                <div id="volunteer-fields" class="stack" style="display:none;">
+                    <div class="form-group">
+                        <label for="teamName">Team Name</label>
+                        <input id="teamName" type="text" name="teamName" placeholder="Optional team name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="specialization">Specialization</label>
+                        <input id="specialization" type="text" name="specialization" placeholder="Medical Support, Search and Rescue, Logistics">
+                    </div>
+
+                    <input type="hidden" id="currentLatitude" name="currentLatitude">
+                    <input type="hidden" id="currentLongitude" name="currentLongitude">
+
+                    <div class="form-group">
+                        <label>Current Location</label>
+                        <button type="button" class="btn btn-secondary" id="open-reg-map">
+                            <i data-lucide="map-pin"></i>
+                            <span>Pick Volunteer Location</span>
+                        </button>
+                        <p id="reg-location-status" style="color:var(--muted);font-size:.88rem;margin-top:8px;">Set your location so admins can match nearby emergency requests.</p>
+                    </div>
+
+                    <div id="reg-map-panel" style="display:none;">
+                        <div style="display:flex; gap:10px; margin-bottom:12px;">
+                            <input type="text" id="reg-address-search" placeholder="Search address, e.g. Rangpur, Bangladesh" style="flex:1;">
+                            <button type="button" class="btn btn-secondary" id="reg-search-btn">
+                                <i data-lucide="search"></i>
+                                <span>Search</span>
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="reg-gps-btn">
+                                <i data-lucide="locate"></i>
+                                <span>GPS</span>
+                            </button>
+                        </div>
+                        <div id="reg-map" style="height:320px;border-radius:18px;border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm);"></div>
+                        <button type="button" class="btn btn-primary" id="reg-save-location" style="margin-top:12px;" disabled>
+                            <i data-lucide="save"></i>
+                            <span>Save Location</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit"><i data-lucide="user-plus"></i><span>Create account</span></button>
+            </form>
+
+            <p class="auth-footer">Already have an account? <a th:href="@{/login}">Login</a></p>
+        </div>
+    </section>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const roleSelect = document.getElementById("role");
+    const volunteerFields = document.getElementById("volunteer-fields");
+    const locationStatus = document.getElementById("reg-location-status");
+    let regMap = null;
+    let regMarker = null;
+    let selectedLat = null;
+    let selectedLng = null;
+
+    roleSelect.addEventListener("change", () => {
+        const isVolunteer = roleSelect.value === "VOLUNTEER";
+        volunteerFields.style.display = isVolunteer ? "grid" : "none";
+        document.getElementById("specialization").required = isVolunteer;
+    });
+
+    document.getElementById("open-reg-map").addEventListener("click", () => {
+        document.getElementById("reg-map-panel").style.display = "block";
+        if (!regMap) {
+            setTimeout(initRegistrationMap, 100);
+        } else {
+            setTimeout(() => regMap.invalidateSize(), 100);
+        }
+    });
+
+    function initRegistrationMap() {
+        const center = [23.8103, 90.4125];
+        regMap = L.map("reg-map").setView(center, 12);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "OpenStreetMap contributors"
+        }).addTo(regMap);
+
+        regMarker = L.marker(center, {
+            draggable: true,
+            icon: L.divIcon({
+                className: "",
+                html: '<div style="width:20px;height:20px;background:var(--primary,#0f6c74);border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:grab;"></div>',
+                iconAnchor: [10, 10]
+            })
+        }).addTo(regMap);
+
+        regMarker.on("dragend", (event) => {
+            const pos = event.target.getLatLng();
+            setRegistrationLatLng(pos.lat, pos.lng, "Pin dragged");
+        });
+
+        regMap.on("click", (event) => {
+            regMarker.setLatLng(event.latlng);
+            setRegistrationLatLng(event.latlng.lat, event.latlng.lng, "Map location selected");
+        });
+    }
+
+    function setRegistrationLatLng(lat, lng, source) {
+        selectedLat = lat;
+        selectedLng = lng;
+        document.getElementById("reg-save-location").disabled = false;
+        locationStatus.textContent = source + ": Lat " + lat.toFixed(5) + " - Lng " + lng.toFixed(5);
+    }
+
+    document.getElementById("reg-search-btn").addEventListener("click", () => {
+        const query = document.getElementById("reg-address-search").value.trim();
+        if (!query) return;
+
+        locationStatus.textContent = 'Searching for "' + query + '"...';
+        fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(query), {
+            headers: { "Accept-Language": "en" }
+        })
+            .then(response => response.json())
+            .then(results => {
+                if (!results || results.length === 0) {
+                    locationStatus.textContent = "Address not found. Try a more specific location.";
+                    return;
+                }
+                const result = results[0];
+                const lat = parseFloat(result.lat);
+                const lng = parseFloat(result.lon);
+                regMap.setView([lat, lng], 15);
+                regMarker.setLatLng([lat, lng]);
+                setRegistrationLatLng(lat, lng, result.display_name.split(",")[0]);
+            })
+            .catch(() => {
+                locationStatus.textContent = "Search failed. Check your internet connection.";
+            });
+    });
+
+    document.getElementById("reg-address-search").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            document.getElementById("reg-search-btn").click();
+        }
+    });
+
+    document.getElementById("reg-gps-btn").addEventListener("click", () => {
+        if (!navigator.geolocation) {
+            locationStatus.textContent = "GPS is not supported in this browser.";
+            return;
+        }
+
+        locationStatus.textContent = "Requesting GPS location...";
+        navigator.geolocation.getCurrentPosition((pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            regMap.setView([lat, lng], 15);
+            regMarker.setLatLng([lat, lng]);
+            setRegistrationLatLng(lat, lng, "GPS detected");
+        }, () => {
+            locationStatus.textContent = "GPS blocked or unavailable. Search or click the map instead.";
+        }, { timeout: 8000, enableHighAccuracy: true });
+    });
+
+    document.getElementById("reg-save-location").addEventListener("click", () => {
+        if (selectedLat === null || selectedLng === null) return;
+        document.getElementById("currentLatitude").value = selectedLat;
+        document.getElementById("currentLongitude").value = selectedLng;
+        locationStatus.textContent = "Location saved: Lat " + selectedLat.toFixed(5) + " - Lng " + selectedLng.toFixed(5);
+    });
+
+    lucide.createIcons();
+</script>
+</body>
+</html>

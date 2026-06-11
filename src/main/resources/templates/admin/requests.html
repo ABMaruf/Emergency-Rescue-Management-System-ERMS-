@@ -1,0 +1,98 @@
+﻿<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Emergency Requests - ERMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="brand"><div class="brand-mark"><i data-lucide="shield-plus"></i></div><div class="brand-text"><h2>ERMS Control</h2><p>Emergency operations</p></div></div>
+        <div class="nav-section-title">Navigation</div>
+        <nav class="nav-links">
+            <a class="nav-link" th:href="@{/admin/dashboard}"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+            <a class="nav-link active" th:href="@{/admin/requests}"><i data-lucide="siren"></i><span>Requests</span></a>
+            <a class="nav-link" th:href="@{/admin/volunteers}"><i data-lucide="users"></i><span>Volunteers</span></a>
+            <a class="nav-link" th:href="@{/admin/users}"><i data-lucide="user-cog"></i><span>Users</span></a>
+        </nav>
+        <form th:action="@{/logout}" method="post" class="logout-form"><button type="submit" class="logout-btn"><i data-lucide="log-out"></i><span>Logout</span></button></form>
+    </aside>
+
+    <div class="main-panel">
+        <header class="topbar"><div class="topbar-title"><h1>Emergency Requests</h1><p>Review emergency submissions and assign available volunteers.</p></div><div class="topbar-actions"><div class="topbar-chip"><i data-lucide="siren"></i><span>Request queue</span></div></div></header>
+        <main class="page-content">
+            <div th:if="${param.success}" class="alert success">Volunteer assigned successfully.</div>
+            <section class="surface-card">
+                <div class="section-header"><div><h3>All emergency requests</h3><p>Assign responders and monitor request status.</p></div></div>
+                <div class="table-wrap" th:if="${not #lists.isEmpty(allRequests)}">
+                    <table><thead><tr><th>ID</th><th>User</th><th>Type</th><th>Priority</th><th>Status</th><th>Address</th><th>Tools</th><th>Assign Volunteer</th></tr></thead><tbody>
+                    <tr th:each="req : ${allRequests}">
+                        <td th:text="${req.id}"></td><td th:text="${req.fullName}"></td><td th:text="${req.emergencyType}"></td><td th:text="${req.priorityLevel}"></td>
+                        <td><span class="badge pending" th:if="${req.status.name() == 'PENDING'}" th:text="${req.status}"></span><span class="badge progress" th:if="${req.status.name() == 'IN_PROGRESS' || req.status.name() == 'ASSIGNED'}" th:text="${req.status}"></span><span class="badge completed" th:if="${req.status.name() == 'COMPLETED'}" th:text="${req.status}"></span><span class="badge cancelled" th:if="${req.status.name() == 'CANCELLED'}" th:text="${req.status}"></span></td>
+                        <td th:text="${req.address}"></td>
+                        <td>
+                            <a th:href="@{/chat/{id}(id=${req.id})}" class="inline-action"><i data-lucide="message-square"></i> Chat</a>
+                            <a th:href="@{/map/{id}(id=${req.id})}" class="inline-action" style="margin-top:8px;"><i data-lucide="map-pin"></i> Live Map</a>
+                        </td>
+                        <td><form th:action="@{/admin/requests/{id}/assign(id=${req.id})}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><select name="volunteerId" required><option value="">Select Volunteer</option><th:block th:if="${nearestMap[req.id] != null and not #lists.isEmpty(nearestMap[req.id])}"><optgroup label="Nearest Available"><option th:each="vd : ${nearestMap[req.id]}" th:value="${vd.volunteer.id}" th:text="${vd.volunteer.user.fullName + ' - ' + vd.distanceFormatted + ' - ' + (vd.volunteer.specialization != null ? vd.volunteer.specialization : 'General')}"></option></optgroup></th:block><th:block th:unless="${nearestMap[req.id] != null and not #lists.isEmpty(nearestMap[req.id])}"><optgroup label="All Available"><option th:each="v : ${allVolunteers}" th:value="${v.id}" th:text="${v.user.fullName + ' (' + (v.specialization != null ? v.specialization : 'General') + ')'}"></option></optgroup></th:block></select><input type="text" name="notes" placeholder="Admin notes"><button type="submit">Assign</button></form></td>
+                    </tr>
+                    </tbody></table>
+                </div>
+                <div class="empty-state" th:if="${#lists.isEmpty(allRequests)}"><i data-lucide="inbox"></i><h4>No emergency requests found</h4><p>Submitted emergency requests will appear here for review and assignment.</p></div>
+            </section>
+        </main>
+    </div>
+</div>
+<script>lucide.createIcons();</script>
+<script>
+    (function () {
+        const sidebar = document.querySelector(".sidebar");
+        const layout = document.querySelector(".dashboard-layout");
+        if (!sidebar || !layout || document.querySelector(".mobile-menu-btn")) return;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "mobile-menu-btn";
+        button.setAttribute("aria-label", "Open navigation");
+            button.classList.remove("hidden");
+        button.innerHTML = '<i data-lucide="menu"></i>';
+
+        const backdrop = document.createElement("div");
+        backdrop.className = "sidebar-backdrop";
+
+        function closeSidebar() {
+            sidebar.classList.remove("open");
+            backdrop.classList.remove("show");
+            button.setAttribute("aria-label", "Open navigation");
+            button.classList.remove("hidden");
+        }
+
+        function toggleSidebar() {
+            const open = sidebar.classList.toggle("open");
+            backdrop.classList.toggle("show", open);
+            button.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+            button.classList.toggle("hidden", open);
+        }
+
+        button.addEventListener("click", toggleSidebar);
+        backdrop.addEventListener("click", closeSidebar);
+        sidebar.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeSidebar));
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") closeSidebar();
+        });
+
+        document.body.prepend(backdrop);
+        document.body.prepend(button);
+        if (window.lucide) lucide.createIcons();
+    })();
+</script>
+</body>
+</html>
+
+
+
+
+

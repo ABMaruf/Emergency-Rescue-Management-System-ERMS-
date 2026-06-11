@@ -1,0 +1,59 @@
+﻿<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>Volunteers - ERMS</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" th:href="@{/css/style.css}"><script src="https://unpkg.com/lucide@latest"></script></head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar"><div class="brand"><div class="brand-mark"><i data-lucide="shield-plus"></i></div><div class="brand-text"><h2>ERMS Control</h2><p>Emergency operations</p></div></div><div class="nav-section-title">Navigation</div><nav class="nav-links"><a class="nav-link" th:href="@{/admin/dashboard}"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a><a class="nav-link" th:href="@{/admin/requests}"><i data-lucide="siren"></i><span>Requests</span></a><a class="nav-link active" th:href="@{/admin/volunteers}"><i data-lucide="users"></i><span>Volunteers</span></a><a class="nav-link" th:href="@{/admin/users}"><i data-lucide="user-cog"></i><span>Users</span></a>
+        </nav><form th:action="@{/logout}" method="post" class="logout-form"><button type="submit" class="logout-btn"><i data-lucide="log-out"></i><span>Logout</span></button></form></aside>
+    <div class="main-panel"><header class="topbar"><div class="topbar-title"><h1>Volunteer Directory</h1><p>Monitor volunteer availability, specialization, and completed tasks.</p></div><div class="topbar-actions"><div class="topbar-chip"><i data-lucide="users"></i><span>Field teams</span></div></div></header><main class="page-content"><section class="surface-card"><div class="section-header"><div><h3>Registered volunteers</h3><p>Operational readiness and profile details.</p></div></div><div class="table-wrap" th:if="${not #lists.isEmpty(volunteers)}"><table><thead><tr><th>ID</th><th>Full Name</th><th>Team</th><th>Specialization</th><th>Status</th><th>Completed Tasks</th><th>Rating</th></tr></thead><tbody><tr th:each="v : ${volunteers}"><td th:text="${v.id}"></td><td th:text="${v.user.fullName}"></td><td th:text="${v.teamName != null ? v.teamName : 'N/A'}"></td><td th:text="${v.specialization != null ? v.specialization : 'N/A'}"></td><td><span class="badge completed" th:if="${v.availabilityStatus.name() == 'AVAILABLE'}" th:text="${v.availabilityStatus}"></span><span class="badge progress" th:if="${v.availabilityStatus.name() == 'BUSY'}" th:text="${v.availabilityStatus}"></span><span class="badge cancelled" th:if="${v.availabilityStatus.name() == 'OFFLINE'}" th:text="${v.availabilityStatus}"></span></td><td th:text="${v.completedTasks}"></td><td th:text="${v.rating}"></td></tr></tbody></table></div><div class="empty-state" th:if="${#lists.isEmpty(volunteers)}"><i data-lucide="users"></i><h4>No volunteers found</h4><p>Volunteer accounts will appear here after registration or seeding.</p></div></section></main></div>
+</div>
+<script>lucide.createIcons();</script>
+<script>
+    (function () {
+        const sidebar = document.querySelector(".sidebar");
+        const layout = document.querySelector(".dashboard-layout");
+        if (!sidebar || !layout || document.querySelector(".mobile-menu-btn")) return;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "mobile-menu-btn";
+        button.setAttribute("aria-label", "Open navigation");
+            button.classList.remove("hidden");
+        button.innerHTML = '<i data-lucide="menu"></i>';
+
+        const backdrop = document.createElement("div");
+        backdrop.className = "sidebar-backdrop";
+
+        function closeSidebar() {
+            sidebar.classList.remove("open");
+            backdrop.classList.remove("show");
+            button.setAttribute("aria-label", "Open navigation");
+            button.classList.remove("hidden");
+        }
+
+        function toggleSidebar() {
+            const open = sidebar.classList.toggle("open");
+            backdrop.classList.toggle("show", open);
+            button.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+            button.classList.toggle("hidden", open);
+        }
+
+        button.addEventListener("click", toggleSidebar);
+        backdrop.addEventListener("click", closeSidebar);
+        sidebar.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeSidebar));
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") closeSidebar();
+        });
+
+        document.body.prepend(backdrop);
+        document.body.prepend(button);
+        if (window.lucide) lucide.createIcons();
+    })();
+</script>
+</body>
+</html>
+
+
+
+
+

@@ -1,0 +1,507 @@
+﻿<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>User Dashboard - ERMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-mark">
+                <i data-lucide="shield-plus"></i>
+            </div>
+            <div class="brand-text">
+                <h2>ERMS User</h2>
+                <p>Emergency access</p>
+            </div>
+        </div>
+
+        <div class="nav-section-title">Navigation</div>
+        <nav class="nav-links">
+            <a class="nav-link active" th:href="@{/user/dashboard}">
+                <i data-lucide="home"></i>
+                <span>Dashboard</span>
+            </a>
+        </nav>
+
+        <form th:action="@{/logout}" method="post" class="logout-form">
+            <button type="submit" class="logout-btn">
+                <i data-lucide="log-out"></i>
+                <span>Logout</span>
+            </button>
+        </form>
+    </aside>
+
+    <div class="main-panel">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Request Emergency Support</h1>
+                <p>Submit help requests and track updates without delay.</p>
+            </div>
+            <div class="topbar-actions">
+                <div class="notification-widget">
+                    <button type="button" class="topbar-chip notification-toggle" data-notification-toggle>
+                        <i data-lucide="bell-ring"></i>
+                        <span><span th:text="${unreadCount}">0</span> unread notifications</span>
+                    </button>
+                    <div class="notification-popover" data-notification-popover>
+                        <div class="notification-popover-header">
+                            <strong>Notifications</strong>
+                            <span th:text="${unreadCount + ' unread'}">0 unread</span>
+                        </div>
+                        <div class="notification-list" th:if="${not #lists.isEmpty(notifications)}">
+                            <div class="notification-item" th:each="notification : ${notifications}">
+                                <div>
+                                    <strong th:text="${notification.title}">Title</strong>
+                                    <p th:text="${notification.message}">Message</p>
+                                    <span th:text="${#temporals.format(notification.createdAt, 'MMM dd, hh:mm a')}">Time</span>
+                                </div>
+                                <span class="badge pending" th:unless="${notification.read}">NEW</span>
+                            </div>
+                        </div>
+                        <div class="empty-state compact" th:if="${#lists.isEmpty(notifications)}">
+                            <i data-lucide="bell-off"></i>
+                            <h4>No notifications</h4>
+                            <p>You have no updates right now.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="page-content">
+            <section class="hero-panel">
+                <div class="hero-eyebrow">
+                    <i data-lucide="siren"></i>
+                    <span>Citizen support panel</span>
+                </div>
+                <h2>Report emergencies clearly so help can reach faster.</h2>
+                <p>Provide the emergency type, priority, people affected, and location details so the response team can act with better context.</p>
+
+                <div class="hero-grid">
+                    <div class="hero-mini-card">
+                        <span>Submitted requests</span>
+                        <strong th:text="${#lists.size(myRequests)}">0</strong>
+                    </div>
+                    <div class="hero-mini-card">
+                        <span>Unread notifications</span>
+                        <strong th:text="${unreadCount}">0</strong>
+                    </div>
+                    <div class="hero-mini-card">
+                        <span>Response visibility</span>
+                        <strong>Live</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="content-grid">
+                <div class="surface-card">
+                    <div class="section-header">
+                        <div>
+                            <h3>Submit emergency request</h3>
+                            <p>Fill out the key details carefully for faster response coordination.</p>
+                        </div>
+                    </div>
+
+                    <form th:action="@{/user/request/submit}" method="post" id="request-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" name="fullName" placeholder="Enter full name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="text" name="phoneNumber" placeholder="Enter phone number" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Emergency Type</label>
+                                <select name="emergencyType" required>
+                                    <option value="">Select emergency type</option>
+                                    <option th:each="type : ${emergencyTypes}" th:value="${type}" th:text="${type}"></option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Priority Level</label>
+                                <select name="priorityLevel" required>
+                                    <option value="">Select priority</option>
+                                    <option th:each="p : ${priorityLevels}" th:value="${p}" th:text="${p}"></option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>People Count</label>
+                                <input type="number" name="peopleCount" placeholder="Affected people count" required>
+                            </div>
+                            <input type="hidden" id="req-address" name="address">
+                            <input type="hidden" id="req-lat" name="latitude">
+                            <input type="hidden" id="req-lng" name="longitude">
+                            <div class="form-group full">
+                                <label>Emergency Location</label>
+                                <button type="button" id="open-location-picker" class="btn btn-secondary">
+                                    <i data-lucide="map-pin"></i>
+                                    <span>Pick Location</span>
+                                </button>
+                                <p id="geoStatus" style="color:var(--muted);font-size:.88rem;margin-top:8px;">Use GPS, search an address, click the map, or drag the pin.</p>
+                            </div>
+
+                            <div id="request-location-panel" class="form-group full" style="display:none;">
+                                <div style="display:flex; gap:10px; margin-bottom:12px;">
+                                    <input type="text" id="request-address-search" placeholder="Search address or area, e.g. Mirpur 10, Dhaka" style="flex:1;">
+                                    <button type="button" id="request-search-btn" class="btn btn-secondary">
+                                        <i data-lucide="search"></i>
+                                        <span>Search</span>
+                                    </button>
+                                    <button type="button" id="request-gps-btn" class="btn btn-secondary">
+                                        <i data-lucide="locate"></i>
+                                        <span>Use GPS</span>
+                                    </button>
+                                </div>
+                                <div id="request-map" style="height:340px;border-radius:18px;border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm);margin-bottom:12px;"></div>
+                                <div id="request-location-chip" class="topbar-chip" style="display:none;width:fit-content;margin-bottom:12px;">
+                                    <i data-lucide="crosshair"></i>
+                                    <span id="request-location-text"></span>
+                                </div>
+                                <button type="button" id="save-request-location" class="btn btn-primary" disabled>
+                                    <i data-lucide="save"></i>
+                                    <span>Save Location</span>
+                                </button>
+                            </div>
+                            <div class="form-group full">
+                                <label>Additional Details</label>
+                                <textarea name="additionalDetails" placeholder="Describe the emergency situation clearly"></textarea>
+                            </div>
+                            <div class="form-group full">
+                                <button type="submit">
+                                    <i data-lucide="send"></i>
+                                    <span>Submit Request</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="surface-card">
+                    <div class="section-header">
+                        <div>
+                            <h3>Request guidance</h3>
+                            <p>Tips for better emergency reporting.</p>
+                        </div>
+                    </div>
+
+                    <div class="quick-list">
+                        <div class="quick-item">
+                            <strong>Use correct priority</strong>
+                            <span>Mark severe cases accurately</span>
+                        </div>
+                        <div class="quick-item">
+                            <strong>Add location clearly</strong>
+                            <span>Road, area, landmark, and nearby point</span>
+                        </div>
+                        <div class="quick-item">
+                            <strong>Write short details</strong>
+                            <span>State injuries, fire, flood, or blockage</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="surface-card" style="margin-top:20px;">
+                <div class="section-header">
+                    <div>
+                        <h3>My submitted requests</h3>
+                        <p>Track the status of all your emergency submissions.</p>
+                    </div>
+                </div>
+
+                <div class="table-wrap" th:if="${not #lists.isEmpty(myRequests)}">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Address</th>
+                            <th>Tools</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="req : ${myRequests}">
+                            <td th:text="${req.id}"></td>
+                            <td th:text="${req.emergencyType}"></td>
+                            <td th:text="${req.priorityLevel}"></td>
+                            <td>
+                                <span class="badge pending" th:if="${req.status.name() == 'PENDING'}" th:text="${req.status}"></span>
+                                <span class="badge progress" th:if="${req.status.name() == 'IN_PROGRESS' || req.status.name() == 'ASSIGNED'}" th:text="${req.status}"></span>
+                                <span class="badge completed" th:if="${req.status.name() == 'COMPLETED'}" th:text="${req.status}"></span>
+                                <span class="badge cancelled" th:if="${req.status.name() == 'CANCELLED'}" th:text="${req.status}"></span>
+                            </td>
+                            <td th:text="${req.address}"></td>
+                            <td>
+                                <a th:href="@{/chat/{id}(id=${req.id})}" class="inline-action"><i data-lucide="message-square"></i> Chat</a>
+                                <a th:href="@{/map/{id}(id=${req.id})}" class="inline-action" style="margin-top:8px;"><i data-lucide="map-pin"></i> Live Map</a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="empty-state" th:if="${#lists.isEmpty(myRequests)}">
+                    <i data-lucide="clipboard-list"></i>
+                    <h4>No requests submitted yet</h4>
+                    <p>Your submitted emergency requests will appear here with live status updates after the first report is created.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    let requestMap = null;
+    let requestMarker = null;
+    let pickedLat = null;
+    let pickedLng = null;
+    let pickedAddress = "";
+
+    document.getElementById("open-location-picker").addEventListener("click", () => {
+        const panel = document.getElementById("request-location-panel");
+        panel.style.display = "block";
+        panel.scrollIntoView({ behavior: "smooth", block: "center" });
+
+        if (!requestMap) {
+            setTimeout(initRequestMap, 100);
+        } else {
+            setTimeout(() => requestMap.invalidateSize(), 100);
+        }
+    });
+
+    function initRequestMap() {
+        const center = [23.8103, 90.4125];
+        requestMap = L.map("request-map").setView(center, 12);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "OpenStreetMap contributors"
+        }).addTo(requestMap);
+
+        requestMarker = L.marker(center, {
+            draggable: true,
+            icon: L.divIcon({
+                className: "",
+                html: '<div style="width:20px;height:20px;background:var(--primary,#0f6c74);border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:grab;"></div>',
+                iconAnchor: [10, 10]
+            })
+        }).addTo(requestMap);
+
+        requestMarker.on("dragend", (event) => {
+            const pos = event.target.getLatLng();
+            setPickedLocation(pos.lat, pos.lng, "Pin dragged", true);
+        });
+
+        requestMap.on("click", (event) => {
+            requestMarker.setLatLng(event.latlng);
+            setPickedLocation(event.latlng.lat, event.latlng.lng, "Map location selected", true);
+        });
+    }
+
+    function setPickedLocation(lat, lng, label, reverseLookup) {
+        pickedLat = lat;
+        pickedLng = lng;
+        pickedAddress = label || ("Lat " + lat.toFixed(5) + ", Lng " + lng.toFixed(5));
+
+        document.getElementById("save-request-location").disabled = false;
+        updateLocationPreview();
+
+        if (reverseLookup) {
+            reverseGeocode(lat, lng);
+        }
+    }
+
+    function updateLocationPreview() {
+        const chip = document.getElementById("request-location-chip");
+        chip.style.display = "flex";
+        document.getElementById("request-location-text").textContent =
+            pickedAddress + " - Lat " + pickedLat.toFixed(5) + " - Lng " + pickedLng.toFixed(5);
+        lucide.createIcons();
+    }
+
+    function reverseGeocode(lat, lng) {
+        document.getElementById("geoStatus").textContent = "Finding address for selected location...";
+        fetch("https://nominatim.openstreetmap.org/reverse?format=json&lat=" + lat + "&lon=" + lng, {
+            headers: { "Accept-Language": "en" }
+        })
+            .then(response => response.json())
+            .then(data => {
+                pickedAddress = data.display_name || ("Lat " + lat.toFixed(5) + ", Lng " + lng.toFixed(5));
+                document.getElementById("geoStatus").textContent = "Location selected. Save it before submitting.";
+                updateLocationPreview();
+            })
+            .catch(() => {
+                pickedAddress = "Lat " + lat.toFixed(5) + ", Lng " + lng.toFixed(5);
+                document.getElementById("geoStatus").textContent = "Location selected. Address lookup failed, coordinates will be used.";
+                updateLocationPreview();
+            });
+    }
+
+    document.getElementById("request-search-btn").addEventListener("click", searchRequestAddress);
+    document.getElementById("request-address-search").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            searchRequestAddress();
+        }
+    });
+
+    function searchRequestAddress() {
+        const query = document.getElementById("request-address-search").value.trim();
+        if (!query) return;
+
+        document.getElementById("geoStatus").textContent = 'Searching for "' + query + '"...';
+        fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(query), {
+            headers: { "Accept-Language": "en" }
+        })
+            .then(response => response.json())
+            .then(results => {
+                if (!results || results.length === 0) {
+                    document.getElementById("geoStatus").textContent = "Address not found. Try a more specific area.";
+                    return;
+                }
+
+                const result = results[0];
+                const lat = parseFloat(result.lat);
+                const lng = parseFloat(result.lon);
+                pickedAddress = result.display_name;
+                requestMap.setView([lat, lng], 15);
+                requestMarker.setLatLng([lat, lng]);
+                setPickedLocation(lat, lng, pickedAddress, false);
+                document.getElementById("geoStatus").textContent = "Location found. Save it before submitting.";
+            })
+            .catch(() => {
+                document.getElementById("geoStatus").textContent = "Search failed. Check your internet connection.";
+            });
+    }
+
+    document.getElementById("request-gps-btn").addEventListener("click", () => {
+        if (!navigator.geolocation) {
+            document.getElementById("geoStatus").textContent = "GPS is not supported in this browser.";
+            return;
+        }
+
+        document.getElementById("geoStatus").textContent = "Requesting GPS location...";
+        navigator.geolocation.getCurrentPosition((pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            requestMap.setView([lat, lng], 15);
+            requestMarker.setLatLng([lat, lng]);
+            setPickedLocation(lat, lng, "GPS detected", true);
+        }, () => {
+            document.getElementById("geoStatus").textContent = "GPS blocked or unavailable. Search or click the map instead.";
+        }, { timeout: 8000, enableHighAccuracy: true });
+    });
+
+    document.getElementById("save-request-location").addEventListener("click", () => {
+        if (pickedLat === null || pickedLng === null) return;
+
+        const fallbackAddress = "Lat " + pickedLat.toFixed(5) + ", Lng " + pickedLng.toFixed(5);
+        document.getElementById("req-address").value = pickedAddress || fallbackAddress;
+        document.getElementById("req-lat").value = pickedLat;
+        document.getElementById("req-lng").value = pickedLng;
+        document.getElementById("geoStatus").textContent = "Location saved for this emergency request.";
+    });
+
+    document.getElementById("request-form").addEventListener("submit", (event) => {
+        if (!document.getElementById("req-address").value || !document.getElementById("req-lat").value || !document.getElementById("req-lng").value) {
+            event.preventDefault();
+            document.getElementById("geoStatus").textContent = "Please pick and save the emergency location before submitting.";
+            document.getElementById("open-location-picker").scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    });
+
+    lucide.createIcons();
+</script>
+<script>
+    (function () {
+        const sidebar = document.querySelector(".sidebar");
+        const layout = document.querySelector(".dashboard-layout");
+        if (!sidebar || !layout || document.querySelector(".mobile-menu-btn")) return;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "mobile-menu-btn";
+        button.setAttribute("aria-label", "Open navigation");
+            button.classList.remove("hidden");
+        button.innerHTML = '<i data-lucide="menu"></i>';
+
+        const backdrop = document.createElement("div");
+        backdrop.className = "sidebar-backdrop";
+
+        function closeSidebar() {
+            sidebar.classList.remove("open");
+            backdrop.classList.remove("show");
+            button.setAttribute("aria-label", "Open navigation");
+            button.classList.remove("hidden");
+        }
+
+        function toggleSidebar() {
+            const open = sidebar.classList.toggle("open");
+            backdrop.classList.toggle("show", open);
+            button.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+            button.classList.toggle("hidden", open);
+        }
+
+        button.addEventListener("click", toggleSidebar);
+        backdrop.addEventListener("click", closeSidebar);
+        sidebar.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeSidebar));
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") closeSidebar();
+        });
+
+        document.body.prepend(backdrop);
+        document.body.prepend(button);
+        if (window.lucide) lucide.createIcons();
+    })();
+</script>
+<script>
+    (function () {
+        document.querySelectorAll("[data-notification-toggle]").forEach((toggle) => {
+            const widget = toggle.closest(".notification-widget");
+            const popover = widget ? widget.querySelector("[data-notification-popover]") : null;
+            if (!popover) return;
+
+            toggle.addEventListener("click", (event) => {
+                event.stopPropagation();
+                const willOpen = !popover.classList.contains("open");
+                document.querySelectorAll("[data-notification-popover].open").forEach((openPopover) => {
+                    openPopover.classList.remove("open");
+                });
+                popover.classList.toggle("open", willOpen);
+            });
+
+            popover.addEventListener("click", (event) => event.stopPropagation());
+        });
+
+        document.addEventListener("click", () => {
+            document.querySelectorAll("[data-notification-popover].open").forEach((popover) => {
+                popover.classList.remove("open");
+            });
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                document.querySelectorAll("[data-notification-popover].open").forEach((popover) => {
+                    popover.classList.remove("open");
+                });
+            }
+        });
+    })();
+</script>
+</body>
+</html>
+
+
+
+
+
+

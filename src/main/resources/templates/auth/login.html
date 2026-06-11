@@ -1,0 +1,86 @@
+﻿<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - ERMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="auth-shell">
+    <section class="auth-showcase">
+        <div>
+            <div class="brand">
+                <div class="brand-mark">
+                    <i data-lucide="shield-plus"></i>
+                </div>
+                <div class="brand-text">
+                    <h2>ERMS</h2>
+                    <p>Emergency Rescue Management System</p>
+                </div>
+            </div>
+
+            <div class="auth-copy">
+                <h1>Coordinate response with confidence.</h1>
+                <p>ERMS helps admins, volunteers, and citizens work through one connected emergency response platform for faster coordination and clearer updates.</p>
+
+                <div class="auth-points">
+                    <div class="auth-point">
+                        <i data-lucide="shield-check"></i>
+                        <span>Role-based secure access for admin, volunteer, and user accounts</span>
+                    </div>
+                    <div class="auth-point">
+                        <i data-lucide="map"></i>
+                        <span>Location-aware request handling and coordinated field response</span>
+                    </div>
+                    <div class="auth-point">
+                        <i data-lucide="bell-ring"></i>
+                        <span>Live status visibility for emergency tasks and updates</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <p class="mobile-top-note">Emergency coordination platform for rapid, structured, and trackable response.</p>
+    </section>
+
+    <section class="auth-panel">
+        <div class="auth-card">
+            <h2>Welcome back</h2>
+            <p class="subtitle">Login to continue to your operational dashboard.</p>
+
+            <div th:if="${param.error}" class="alert error">Invalid username or password.</div>
+            <div th:if="${param.logout}" class="alert success">You have been logged out successfully.</div>
+            <div th:if="${param.registered}" class="alert success">Registration completed successfully.</div>
+
+            <form th:action="@{/login}" method="post" class="stack">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input id="username" type="text" name="username" placeholder="Enter username" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input id="password" type="password" name="password" placeholder="Enter password" required>
+                </div>
+
+                <button type="submit">
+                    <i data-lucide="log-in"></i>
+                    <span>Login to ERMS</span>
+                </button>
+            </form>
+
+            <p class="auth-footer">
+                Don't have an account?
+                <a th:href="@{/register}">Create one</a>
+            </p>
+        </div>
+    </section>
+</div>
+
+<script>
+    lucide.createIcons();
+</script>
+</body>
+</html>

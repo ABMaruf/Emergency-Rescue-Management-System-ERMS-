@@ -1,0 +1,22 @@
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Local uploads and generated files
+uploads/
+
+# Local tools/installers downloaded during setup
+apache-maven-*/
+apache-maven-*.zip
+mysql-installer-*.msi
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
